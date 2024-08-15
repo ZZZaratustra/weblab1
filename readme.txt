@@ -1,1 +1,1 @@
-git clone https://github.com/ZZZaratustra/weblab1/zzz
+git clone https://github.com/ZZZaratustra/weblab1
