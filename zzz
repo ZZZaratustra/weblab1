@@ -1,0 +1,107 @@
+#!/bin/bash
+
+ipcalc 194.85.32.19/24 -s 10 6 1 18 100 > var1 
+ipcalc 10.12.12.15/23 -s 25 16 240 117 1 > var2 
+ipcalc 212.24.15.199/18 -s 7 0 0 11 10 > var3
+ipcalc 120.13.120.120/27 -s 5 2 2 1 1 > var4 
+
+variants=(var1 var2 var3 var4)
+for i in "${!variants[@]}";
+do
+  file="${variants[$i]}"
+# ip_lines=$(awk '/Network:/ {print $2; if ($0 ~ /Hostwork:/) {print$2}};  ' "$file" | cut -d'/' -f1)
+ip_lines=$(awk '/Network:/ || /Hostroute:/ {print $2}' "$file" | cut -d'/' -f1)
+mask_lines=$(awk '/Netmask:/ {print $2}' "$file")
+hosts=$(awk '/Hosts\/Net:/ {print $2}' "$file")
+hostmin=$(awk '/HostMin:/ || /Hostroute:/ {print $2}' "$file")
+hostmax=$(awk '/HostMax:/ || /Hostroute:/ {print $2}' "$file")
+
+function add {
+  local reader="$1"  
+  local newarr=()
+  while read -r s; do
+  newarr+=("$s")
+done <<< "$reader"
+echo "${newarr[@]}"  
+}
+
+read -r -a ip_array_full < <(add "$ip_lines") 
+ip_array=("${ip_array_full[@]:1}")
+read -r -a mask_array_full < <(add "$mask_lines")
+mask_array=("${mask_array_full[@]:1}")
+read -r -a hosts_array_full < <(add "$hosts")
+hosts_array=("${hosts_array_full[@]:1}")
+read -r -a hostmin_array_full < <(add "$hostmin")
+hostmin_array=("${hostmin_array_full[@]:1}")
+read -r -a hostmax_array_full < <(add "$hostmax")
+hostmax_array=("${hostmax_array_full[@]:1}")
+
+# echo "${#ip_array[@]}sdfadsfafds"
+# echo "${#mask_array[@]}sdfadsfafds"
+# echo "${#hosts_array[@]}sdfadsfafds"
+# echo "${#hostmin_array[@]}sdfadsfafds"
+# echo "${#hostmax_array[@]}sdfadsfafds"
+
+# echo "IP addresses:"
+# for i in "${!ip_array[@]}"; do
+#   echo "${ip_array[$i]}"
+#   echo "${mask_array[$i]}"
+#   echo "${hosts_array[$i]}"
+#   echo "${hostmin_array[$i]}"
+#   echo "${hostmax_array[$i]}"
+#   echo "END"
+#   echo ""
+# done
+
+function print_table {
+  local -a header=("$@")
+  local width
+  local max_width=40
+  
+  # Определяем максимальную ширину колонки
+  for i in "${!header[@]}"; do
+    width="${#header[$i]}"
+    if (( width > max_width )); then
+      max_width=$width
+    fi
+  done
+
+
+
+  # Выводим заголовок
+  printf '%*s\n' "$(((max_width+1)*6))" "" | tr ' ' '_'
+  printf "%-${max_width}s |" "${header[@]}"        
+  printf "\n"
+  
+}
+
+# function rearrange_array {
+#   local arr=("$@")
+#   local temp="${arr[1]}"
+#   local temp2="${arr[2]}"
+#   local temp3="${arr[3]}"
+#   local temp4="${arr[4]}"
+#
+#   arr[1]="$temp3"
+#   arr[2]="$temp4"
+#   arr[3]="$temp"
+#   arr[4]="$temp2"
+#
+#   echo "${arr[@]}"
+# }
+#
+# if (( i == 2 )); then
+#     hostmin_array=($(rearrange_array "${hostmin_array[@]}"))
+#     hostmax_array=($(rearrange_array "${hostmax_array[@]}"))
+#   fi
+
+
+
+
+print_table "Вариант $((i+1))" "${ip_array_full[0]}, ${mask_array_full[0]}"
+print_table "Сеть" "Сеть 1" "Сеть 2" "Сеть 3" "Сеть 4" "Сеть 5" 
+print_table "IP-сети, маска" "${ip_array[0]}, ${mask_array[0]}" "${ip_array[1]}, ${mask_array[1]}"  "${ip_array[2]}, ${mask_array[2]}" "${ip_array[3]}, ${mask_array[3]}" "${ip_array[4]}, ${mask_array[4]}" 
+print_table "Количество IP адресов в IP-сети" "${hosts_array[0]}" "${hosts_array[1]}" "${hosts_array[2]}" "${hosts_array[3]}" "${hosts_array[4]}" 
+print_table "Начальный и конечный адреса сети" "${hostmin_array[0]}-${hostmax_array[0]}" "${hostmin_array[1]}-${hostmax_array[1]}"  "${hostmin_array[2]}-${hostmax_array[2]}" "${hostmin_array[3]}-${hostmax_array[3]}" "${hostmin_array[4]}-${hostmax_array[4]}"
+
+done
